@@ -23,7 +23,7 @@ LpDev* LpDev::open(int port)
 #ifdef linux
         int fd;
         QString device = QString("/dev/parport%1").arg(QString::number(port));
-        if ((fd = ::open(device.toStdString().c_str(), O_RDWR)) < 0) {
+        if ((fd = ::open(device.toAscii(), O_RDWR)) < 0) {
             qDebug() << "unable to open '" << device << "'\n";
             return 0;
         }
