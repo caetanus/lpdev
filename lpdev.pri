@@ -7,8 +7,7 @@
 QT       -= gui
 INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
-TARGET = lpdev
-TEMPLATE = lib
+
 
 SOURCES += $$PWD/lpdev.cpp
 

@@ -19,7 +19,8 @@
 
 #include <Qt/QtCore>
 #include <QObject>
-#include <QMap>
+#include <QHash>
+#include <QMetaType>
 #include <stdio.h>
 
 #ifdef linux
@@ -33,50 +34,10 @@
 
 #elif defined(WIN32)
 
-#   include <windows.h>
-typedef short  (*Inp32Ptr)(short PortAddress);
-void (*Out32Ptr) (short PortAddress, short data);
-Inp32Ptr Inp = 0;
-Out32Ptr Out = 0;
-HINSTANCE InpOut32DLL;
-
-typedef struct{
-    int portOut;
-    int portStatus;
-    int portControl;
-} IOPortNumber;
-
-IOPortNumber IOPorts[3];
-
-void StartInpout(){
-    static bool started = false;
-    if (started)
-        return;
-    if(!(InpOut32DLL = LoadLibrary("inpout32.dll"))) {
-        MessageBox(0, "Couldn't Find inpout32.dll, exiting\nPlease put this dll in your path.", "error", MB_ICONERROR| MB_OK);
-        exit(1);
-    }
-    Inp = (Inp32Ptr)GetProcAddress(InpOut32DLL, "Inp32");
-    Out = (Out32Ptr)GetProcAddress(InpOut32DLL, "Out32");
-
-    // starting the addressment of the ports
-    IOPorts[0].portOut = 0x378;
-    IOPorts[0].portStatus = 0x379;
-    IOPorts[0].portControl = 0x37A;
-
-    IOPorts[1].portOut = 0x278;
-    IOPorts[1].portStatus = 0x279;
-    IOPorts[1].portControl = 0x27A;
-
-    IOPorts[2].portOut = 0x3BC;
-    IOPorts[2].portStatus = 0x3BD,
-    IOPoera[2].portControl = 0x3BE;
-
-    started = true;
-}
-
+#include <windows.h>
 
 #endif
+
 
 class LpDev : public QObject {
 Q_OBJECT
@@ -96,8 +57,12 @@ private:
    int m_fd;
    uchar m_data;
    LpDev(int fd);
-   static QMap<int,LpDev*> m_ports;		// singleton instances
+
 };
+
+static QHash<int,LpDev*> m_ports;		// singleton instances
+
+
 #endif // LPDEV_H
 
 
