@@ -49,45 +49,64 @@ void StartInpout(){
 
 
 
-LpDev::LpDev(int fd)
+LpDev::LpDev(int fd, int port)
     : QObject(0)
 {
 #ifdef WIN32
     StartInpout();
 #endif
     m_fd = fd;
-    write(0);
+    m_port = port;
+    qDebug() << "lpt port" << port << "openned with fd" << fd;
+
 }
 
 LpDev* LpDev::open(int port)
 {
+    int fd = internalOpen(port);
+    switch(fd) {
+        case -1:
+            return NULL;
+            break;
+        case -255:
+            return m_ports[port];
+            break;
+        default:
+            LpDev* lp = new LpDev(fd, port);
+            m_ports[port] = lp;
+            lp->write(0);
+            return lp;
+    }
+
+}
+
+int LpDev::internalOpen(int port)
+{
 
 #ifdef WIN32
     Q_ASSERT(port < 3 and port >= 0);
+    if(port > 2 and port < 0){
+        return -1;
+    }
 #endif
     if (m_ports.keys().contains(port)) {
-        return m_ports[port];
+        return -255;
     }
     else {
 #ifdef linux
         int fd;
         QString device = QString("/dev/parport%1").arg(QString::number(port));
         if ((fd = ::open(device.toAscii(), O_RDWR)) < 0) {
-            qDebug() << "unable to open '" << device << "'\n";
-            return 0;
+            return -1;
         }
         if(ioctl(fd, PPCLAIM)) {
-            qDebug() << "unable to claim interface of device '" << device << "'\n";
             ::close(fd);
-            return 0;
+            return -1;
         }
-        LpDev* r =  new LpDev(fd);
-        m_ports[port] = r;
-        return r;
+
+        return fd;
 #elif WIN32
-        LpDev* r =  new LpDev(port);
-        m_ports[port] = r;
-        return r;
+        return port;
 #endif
     }
 }
@@ -104,8 +123,10 @@ void LpDev::close()
 #endif
 }
 
-void LpDev::write(uchar data)
+void LpDev::write(uint udata)
 {
+    uchar data = (uchar)udata;
+    internalOpen(m_port);
     m_data = data;
 #ifdef linux
     ioctl(m_fd, PPWDATA, &data);
@@ -128,6 +149,7 @@ uchar LpDev::readStatus()
 
 uchar LpDev::readControl()
 {
+    internalOpen(m_port);
 #ifdef WIN32
     return In(IOPorts[m_fd].portControl);
 #elif defined(linux)
@@ -138,17 +160,21 @@ uchar LpDev::readControl()
 }
 
 
-void LpDev::writeControl(uchar data)
+void LpDev::writeControl(uint udata)
 {
+    uchar data = (uchar)udata;
+    internalOpen(m_port);
 #ifdef WIN32
-    Out(IOPorts[m_fd].portControl, data);
+    Out(IOPorts[m_port].portControl, data);
 #elif defined(linux)
     ioctl(m_fd, PPWCONTROL, &data);
 #endif
 }
 
-void LpDev::writeStatus(uchar data)
+void LpDev::writeStatus(uint udata)
 {
+    uchar data = (uchar)udata;
+    internalOpen(m_port);
 #ifdef WIN32
     Out(IOPorts[m_fd].portStatus, data);
 #elif defined(linux)
@@ -161,10 +187,11 @@ void LpDev::writeStatus(uchar data)
 
 uchar LpDev::read()
 {
+
     return m_data;
 }
 
 LpDev::~LpDev(){
     close();
-    delete m_ports[m_fd];
+    delete m_ports[m_port];
 }

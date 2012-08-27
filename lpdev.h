@@ -46,22 +46,24 @@ public:
    static LpDev* open(int port = 0);
 
    ~LpDev();
-   void write(uchar data);
+public slots:
+   void write(uint data);
    uchar read();
-   void writeStatus(uchar data);
+   void writeStatus(uint data);
    uchar readStatus();
-   void writeControl(uchar data);
+   void writeControl(uint data);
    uchar readControl();
 private:
    void close();
+   static int internalOpen(int port = 0);
    int m_fd;
+   int refcount;
+   int m_port;
    uchar m_data;
-   LpDev(int fd);
+   LpDev(int fd, int port);
 
 };
-
 static QHash<int,LpDev*> m_ports;		// singleton instances
-
 
 #endif // LPDEV_H
 
